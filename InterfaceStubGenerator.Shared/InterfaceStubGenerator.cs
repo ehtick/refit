@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
-
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -171,8 +170,8 @@ namespace Refit.Generator
                         continue;
 
                     // The interface has no refit methods, but its base interfaces might
-                    var hasDerivedRefit = ifaceSymbol.AllInterfaces
-                        .SelectMany(i => i.GetMembers().OfType<IMethodSymbol>())
+                    var hasDerivedRefit = ifaceSymbol
+                        .AllInterfaces.SelectMany(i => i.GetMembers().OfType<IMethodSymbol>())
                         .Any(m => IsRefitMethod(m, httpMethodBaseAttributeSymbol));
 
                     if (hasDerivedRefit)
@@ -247,6 +246,13 @@ namespace Refit.Implementation
     [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
     internal static partial class Generated
     {{
+#if NET5_0_OR_GREATER
+        [System.Runtime.CompilerServices.ModuleInitializer]
+        [System.Diagnostics.CodeAnalysis.DynamicDependency(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All, typeof(global::Refit.Implementation.Generated))]
+        public static void Initialize()
+        {{
+        }}
+#endif
     }}
 }}
 #pragma warning restore
@@ -284,7 +290,8 @@ namespace Refit.Implementation
                 );
 
                 var keyName = group.Key.Name;
-                if (keyCount.TryGetValue(keyName, out var value))
+                int value;
+                while (keyCount.TryGetValue(keyName, out value))
                 {
                     keyName = $"{keyName}{++value}";
                 }
@@ -390,8 +397,8 @@ namespace Refit.Implementation
                 .ToList();
 
             // get methods for all inherited
-            var derivedMethods = interfaceSymbol.AllInterfaces
-                .SelectMany(i => i.GetMembers().OfType<IMethodSymbol>())
+            var derivedMethods = interfaceSymbol
+                .AllInterfaces.SelectMany(i => i.GetMembers().OfType<IMethodSymbol>())
                 .ToList();
 
             // Look for disposable
@@ -528,9 +535,9 @@ namespace Refit.Implementation
             {{
                 {@return}({returnType})______func(this.Client, ______arguments){configureAwait};
             }}
-            catch (global::System.Exception ex)
+            catch (global::System.Exception ______ex)
             {{
-                throw ex;
+                throw ______ex;
             }}
 "
             );
@@ -576,7 +583,7 @@ namespace Refit.Implementation
             bool isOverrideOrExplicitImplementation
         )
         {
-            // Explicit interface implementations and ovverrides can only have class or struct constraints
+            // Explicit interface implementations and overrides can only have class or struct constraints
 
             var parameters = new List<string>();
             if (typeParameter.HasReferenceTypeConstraint)

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -9,9 +9,7 @@ using System.Reflection;
 using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-
 using Microsoft.AspNetCore.WebUtilities;
-
 using Xunit;
 
 namespace Refit.Tests
@@ -1064,8 +1062,8 @@ namespace Refit.Tests
             Assert.Equal("1", fixture.Headers["Api-Version"]);
 
             Assert.Equal(4, fixture.Headers.Count);
-            Assert.Single(fixture.HeaderCollectionParameterMap);
-            Assert.True(fixture.HeaderCollectionParameterMap.Contains(1));
+            Assert.True(fixture.HasHeaderCollection);
+            Assert.True(fixture.HeaderCollectionAt(1));
         }
 
         [Theory]
@@ -1087,8 +1085,8 @@ namespace Refit.Tests
             Assert.NotNull(fixture.BodyParameterInfo);
             Assert.Null(fixture.AuthorizeParameterInfo);
 
-            Assert.Single(fixture.HeaderCollectionParameterMap);
-            Assert.True(fixture.HeaderCollectionParameterMap.Contains(2));
+            Assert.True(fixture.HasHeaderCollection);
+            Assert.True(fixture.HeaderCollectionAt(2));
         }
 
         [Theory]
@@ -1112,8 +1110,8 @@ namespace Refit.Tests
             Assert.Null(fixture.BodyParameterInfo);
             Assert.Null(fixture.AuthorizeParameterInfo);
 
-            Assert.Single(fixture.HeaderCollectionParameterMap);
-            Assert.True(fixture.HeaderCollectionParameterMap.Contains(1));
+            Assert.True(fixture.HasHeaderCollection);
+            Assert.True(fixture.HeaderCollectionAt(1));
         }
 
         [Theory]
@@ -1143,8 +1141,8 @@ namespace Refit.Tests
             Assert.NotNull(fixture.BodyParameterInfo);
             Assert.Null(fixture.AuthorizeParameterInfo);
 
-            Assert.Single(fixture.HeaderCollectionParameterMap);
-            Assert.True(fixture.HeaderCollectionParameterMap.Contains(1));
+            Assert.True(fixture.HasHeaderCollection);
+            Assert.True(fixture.HeaderCollectionAt(1));
             Assert.Equal(2, fixture.BodyParameterInfo.Item3);
         }
 
@@ -1170,8 +1168,8 @@ namespace Refit.Tests
             Assert.Null(fixture.BodyParameterInfo);
 
             Assert.NotNull(fixture.AuthorizeParameterInfo);
-            Assert.Single(fixture.HeaderCollectionParameterMap);
-            Assert.True(fixture.HeaderCollectionParameterMap.Contains(2));
+            Assert.True(fixture.HasHeaderCollection);
+            Assert.True(fixture.HeaderCollectionAt(2));
         }
 
         [Theory]
@@ -1197,8 +1195,8 @@ namespace Refit.Tests
 
             Assert.Single(fixture.HeaderParameterMap);
             Assert.Equal("Authorization", fixture.HeaderParameterMap[1]);
-            Assert.Single(fixture.HeaderCollectionParameterMap);
-            Assert.True(fixture.HeaderCollectionParameterMap.Contains(2));
+            Assert.True(fixture.HasHeaderCollection);
+            Assert.True(fixture.HeaderCollectionAt(2));
 
             input = typeof(IRestMethodInfoTests);
             fixture = new RestMethodInfoInternal(
@@ -1222,8 +1220,8 @@ namespace Refit.Tests
 
             Assert.Single(fixture.HeaderParameterMap);
             Assert.Equal("Authorization", fixture.HeaderParameterMap[2]);
-            Assert.Single(fixture.HeaderCollectionParameterMap);
-            Assert.True(fixture.HeaderCollectionParameterMap.Contains(1));
+            Assert.True(fixture.HasHeaderCollection);
+            Assert.True(fixture.HeaderCollectionAt(1));
         }
 
         [Theory]
@@ -1255,8 +1253,8 @@ namespace Refit.Tests
 
             Assert.Single(fixture.HeaderParameterMap);
             Assert.Equal("X-PathMember", fixture.HeaderParameterMap[0]);
-            Assert.Single(fixture.HeaderCollectionParameterMap);
-            Assert.True(fixture.HeaderCollectionParameterMap.Contains(1));
+            Assert.True(fixture.HasHeaderCollection);
+            Assert.True(fixture.HeaderCollectionAt(1));
         }
 
         [Theory]
@@ -1276,8 +1274,8 @@ namespace Refit.Tests
             Assert.Null(fixture.BodyParameterInfo);
 
             Assert.Equal("baz", fixture.QueryParameterMap[2]);
-            Assert.Single(fixture.HeaderCollectionParameterMap);
-            Assert.True(fixture.HeaderCollectionParameterMap.Contains(1));
+            Assert.True(fixture.HasHeaderCollection);
+            Assert.True(fixture.HeaderCollectionAt(1));
         }
 
         [Theory]
@@ -1323,8 +1321,8 @@ namespace Refit.Tests
 
             Assert.Single(fixture.PropertyParameterMap);
 
-            Assert.Single(fixture.HeaderCollectionParameterMap);
-            Assert.True(fixture.HeaderCollectionParameterMap.Contains(0));
+            Assert.True(fixture.HasHeaderCollection);
+            Assert.True(fixture.HeaderCollectionAt(0));
         }
 
         [Theory]
@@ -1395,7 +1393,7 @@ namespace Refit.Tests
             Assert.Empty(fixture.HeaderParameterMap);
             Assert.NotNull(fixture.BodyParameterInfo);
             Assert.Null(fixture.AuthorizeParameterInfo);
-            Assert.Empty(fixture.HeaderCollectionParameterMap);
+            Assert.False(fixture.HasHeaderCollection);
 
             Assert.Equal("SomeProperty", fixture.PropertyParameterMap[2]);
         }
@@ -1422,7 +1420,7 @@ namespace Refit.Tests
             Assert.Empty(fixture.HeaderParameterMap);
             Assert.NotNull(fixture.BodyParameterInfo);
             Assert.Null(fixture.AuthorizeParameterInfo);
-            Assert.Empty(fixture.HeaderCollectionParameterMap);
+            Assert.False(fixture.HasHeaderCollection);
 
             Assert.Equal("SomeProperty", fixture.PropertyParameterMap[2]);
             Assert.Equal("SomeOtherProperty", fixture.PropertyParameterMap[3]);
@@ -1451,7 +1449,7 @@ namespace Refit.Tests
             Assert.Empty(fixture.HeaderParameterMap);
             Assert.Null(fixture.BodyParameterInfo);
             Assert.Null(fixture.AuthorizeParameterInfo);
-            Assert.Empty(fixture.HeaderCollectionParameterMap);
+            Assert.False(fixture.HasHeaderCollection);
 
             Assert.Equal("SomeProperty", fixture.PropertyParameterMap[1]);
         }
@@ -1479,7 +1477,7 @@ namespace Refit.Tests
             Assert.Empty(fixture.HeaderParameterMap);
             Assert.NotNull(fixture.BodyParameterInfo);
             Assert.Null(fixture.AuthorizeParameterInfo);
-            Assert.Empty(fixture.HeaderCollectionParameterMap);
+            Assert.False(fixture.HasHeaderCollection);
 
             Assert.Equal("SomeProperty", fixture.PropertyParameterMap[1]);
             Assert.Equal(2, fixture.BodyParameterInfo.Item3);
@@ -2162,16 +2160,11 @@ namespace Refit.Tests
             CancellationToken cancellationToken
         )
         {
-            if (request == null)
-            {
-                throw new ArgumentNullException(nameof(request));
-            }
-
             RequestMessage = request;
             if (request.Content != null)
             {
-                SendContent = await request.Content
-                    .ReadAsStringAsync(cancellationToken)
+                SendContent = await request
+                    .Content.ReadAsStringAsync(cancellationToken)
                     .ConfigureAwait(false);
             }
 
@@ -2182,9 +2175,19 @@ namespace Refit.Tests
         }
     }
 
-    public class TestUrlParameterFormatter(string constantOutput) : IUrlParameterFormatter
+    public class TestUrlParameterFormatter : IUrlParameterFormatter
     {
-        public string Format(object value, ICustomAttributeProvider attributeProvider, Type type) => constantOutput;
+        readonly string constantParameterOutput;
+
+        public TestUrlParameterFormatter(string constantOutput)
+        {
+            constantParameterOutput = constantOutput;
+        }
+
+        public string Format(object value, ICustomAttributeProvider attributeProvider, Type type)
+        {
+            return constantParameterOutput;
+        }
     }
 
     // Converts enums to ints and adds a suffix to strings to test that both dictionary keys and values are formatted.
@@ -2528,7 +2531,7 @@ namespace Refit.Tests
 
             var uri = new Uri(new Uri("http://api"), output.RequestUri);
 
-            Assert.Equal("/query?q2=value2&q1=value1", uri.PathAndQuery);
+            Assert.Equal("/query?q1=value1&q2=value2", uri.PathAndQuery);
         }
 
         [Fact]
@@ -3239,6 +3242,29 @@ namespace Refit.Tests
         }
 
         [Fact]
+        public void BodyContentGetsUrlEncodedWithCollectionFormat()
+        {
+            var settings = new RefitSettings() { CollectionFormat = CollectionFormat.Csv };
+            var fixture = new RequestBuilderImplementation<IDummyHttpApi>(settings);
+            var factory = fixture.RunRequest("PostSomeUrlEncodedStuff");
+            var output = factory(
+                new object[]
+                {
+                    6,
+                    new
+                    {
+                        Foo = "Something",
+                        Bar = 100,
+                        FooBar = new [] {5,7},
+                        Baz = "" // explicitly use blank to preserve value that would be stripped if null
+                    }
+                }
+            );
+
+            Assert.Equal("Foo=Something&Bar=100&FooBar=5%2C7&Baz=", output.SendContent);
+        }
+
+        [Fact]
         public void FormFieldGetsAliased()
         {
             var fixture = new RequestBuilderImplementation<IDummyHttpApi>();
@@ -3800,6 +3826,44 @@ namespace Refit.Tests
                 $"/foo?{(int)TestEnum.A}=value1{TestEnumUrlParameterFormatter.StringParameterSuffix}&{(int)TestEnum.B}=value2{TestEnumUrlParameterFormatter.StringParameterSuffix}",
                 uri.PathAndQuery
             );
+        }
+
+        [Fact]
+        public void ComplexQueryObjectWithDefaultKeyFormatterProducesCorrectQueryString()
+        {
+            var fixture = new RequestBuilderImplementation<IDummyHttpApi>();
+            var factory = fixture.BuildRequestFactoryForMethod(
+                nameof(IDummyHttpApi.ComplexQueryObjectWithDictionary)
+            );
+
+            var complexQuery = new ComplexQueryObject { TestAlias2 = "value1" };
+
+            var output = factory(new object[] { complexQuery });
+            var uri = new Uri(new Uri("http://api"), output.RequestUri);
+
+            Assert.Equal("/foo?TestAlias2=value1", uri.PathAndQuery);
+        }
+
+        [Fact]
+        public void ComplexQueryObjectWithCustomKeyFormatterProducesCorrectQueryString()
+        {
+            var urlParameterKeyFormatter = new CamelCaseUrlParameterKeyFormatter();
+
+            var refitSettings = new RefitSettings
+            {
+                UrlParameterKeyFormatter = urlParameterKeyFormatter
+            };
+            var fixture = new RequestBuilderImplementation<IDummyHttpApi>(refitSettings);
+            var factory = fixture.BuildRequestFactoryForMethod(
+                nameof(IDummyHttpApi.ComplexQueryObjectWithDictionary)
+            );
+
+            var complexQuery = new ComplexQueryObject { TestAlias2 = "value1" };
+
+            var output = factory(new object[] { complexQuery });
+            var uri = new Uri(new Uri("http://api"), output.RequestUri);
+
+            Assert.Equal("/foo?testAlias2=value1", uri.PathAndQuery);
         }
 
         [Fact]

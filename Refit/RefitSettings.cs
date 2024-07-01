@@ -1,8 +1,13 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Net.Http;
 using System.Reflection;
 using System.Runtime.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Refit
 {
@@ -17,6 +22,7 @@ namespace Refit
         public RefitSettings()
         {
             ContentSerializer = new SystemTextJsonContentSerializer();
+            UrlParameterKeyFormatter = new DefaultUrlParameterKeyFormatter();
             UrlParameterFormatter = new DefaultUrlParameterFormatter();
             FormUrlEncodedParameterFormatter = new DefaultFormUrlEncodedParameterFormatter();
             ExceptionFactory = new DefaultApiExceptionFactory(this).CreateAsync;
@@ -30,8 +36,24 @@ namespace Refit
         /// <param name="formUrlEncodedParameterFormatter">The <see cref="IFormUrlEncodedParameterFormatter"/> instance to use (defaults to <see cref="DefaultFormUrlEncodedParameterFormatter"/>)</param>
         public RefitSettings(
             IHttpContentSerializer contentSerializer,
+            IUrlParameterFormatter? urlParameterFormatter,
+            IFormUrlEncodedParameterFormatter? formUrlEncodedParameterFormatter
+        )
+            : this(contentSerializer, urlParameterFormatter, formUrlEncodedParameterFormatter, null)
+        { }
+
+        /// <summary>
+        /// Creates a new <see cref="RefitSettings"/> instance with the specified parameters
+        /// </summary>
+        /// <param name="contentSerializer">The <see cref="IHttpContentSerializer"/> instance to use</param>
+        /// <param name="urlParameterFormatter">The <see cref="IUrlParameterFormatter"/> instance to use (defaults to <see cref="DefaultUrlParameterFormatter"/>)</param>
+        /// <param name="formUrlEncodedParameterFormatter">The <see cref="IFormUrlEncodedParameterFormatter"/> instance to use (defaults to <see cref="DefaultFormUrlEncodedParameterFormatter"/>)</param>
+        /// <param name="urlParameterKeyFormatter">The <see cref="IUrlParameterKeyFormatter"/> instance to use (defaults to <see cref="DefaultUrlParameterKeyFormatter"/>)</param>
+        public RefitSettings(
+            IHttpContentSerializer contentSerializer,
             IUrlParameterFormatter? urlParameterFormatter = null,
-            IFormUrlEncodedParameterFormatter? formUrlEncodedParameterFormatter = null
+            IFormUrlEncodedParameterFormatter? formUrlEncodedParameterFormatter = null,
+            IUrlParameterKeyFormatter? urlParameterKeyFormatter = null
         )
         {
             ContentSerializer =
@@ -43,6 +65,8 @@ namespace Refit
             UrlParameterFormatter = urlParameterFormatter ?? new DefaultUrlParameterFormatter();
             FormUrlEncodedParameterFormatter =
                 formUrlEncodedParameterFormatter ?? new DefaultFormUrlEncodedParameterFormatter();
+            UrlParameterKeyFormatter =
+                urlParameterKeyFormatter ?? new DefaultUrlParameterKeyFormatter();
             ExceptionFactory = new DefaultApiExceptionFactory(this).CreateAsync;
         }
 
@@ -72,6 +96,12 @@ namespace Refit
         public IHttpContentSerializer ContentSerializer { get; set; }
 
         /// <summary>
+        /// The <see cref="IUrlParameterKeyFormatter"/> instance to use for formatting URL parameter keys (defaults to <see cref="DefaultUrlParameterKeyFormatter" />.
+        /// Allows customization of key naming conventions.
+        /// </summary>
+        public IUrlParameterKeyFormatter UrlParameterKeyFormatter { get; set; }
+
+        /// <summary>
         /// The <see cref="IUrlParameterFormatter"/> instance to use (defaults to <see cref="DefaultUrlParameterFormatter"/>)
         /// </summary>
         public IUrlParameterFormatter UrlParameterFormatter { get; set; }
@@ -95,7 +125,7 @@ namespace Refit
         /// <summary>
         /// Optional Key-Value pairs, which are displayed in the property <see cref="HttpRequestMessage.Properties"/>.
         /// </summary>
-        public Dictionary<string, object> HttpRequestMessageOptions { get; set; }
+        public Dictionary<string, object>? HttpRequestMessageOptions { get; set; }
     }
 
     /// <summary>
@@ -132,6 +162,19 @@ namespace Refit
     }
 
     /// <summary>
+    /// Provides a mechanism for formatting URL parameter keys, allowing customization of key naming conventions.
+    /// </summary>
+    public interface IUrlParameterKeyFormatter
+    {
+        /// <summary>
+        /// Formats the specified key.
+        /// </summary>
+        /// <param name="key">The key.</param>
+        /// <returns></returns>
+        string Format(string key);
+    }
+
+    /// <summary>
     /// Provides Url parameter formatting.
     /// </summary>
     public interface IUrlParameterFormatter
@@ -161,6 +204,19 @@ namespace Refit
     }
 
     /// <summary>
+    /// Default Url parameter key formatter. Does not do any formatting.
+    /// </summary>
+    public class DefaultUrlParameterKeyFormatter : IUrlParameterKeyFormatter
+    {
+        /// <summary>
+        /// Formats the specified key.
+        /// </summary>
+        /// <param name="key">The key.</param>
+        /// <returns></returns>
+        public virtual string Format(string key) => key;
+    }
+
+    /// <summary>
     /// Default Url parameter formater.
     /// </summary>
     public class DefaultUrlParameterFormatter : IUrlParameterFormatter
@@ -177,7 +233,7 @@ namespace Refit
         /// <param name="attributeProvider">The attribute provider.</param>
         /// <param name="type">The type.</param>
         /// <returns></returns>
-        /// <exception cref="System.ArgumentNullException">attributeProvider</exception>
+        /// <exception cref="ArgumentNullException">attributeProvider</exception>
         public virtual string? Format(
             object? parameterValue,
             ICustomAttributeProvider attributeProvider,
@@ -185,7 +241,9 @@ namespace Refit
         )
         {
             if (attributeProvider is null)
+            {
                 throw new ArgumentNullException(nameof(attributeProvider));
+            }
 
             // See if we have a format
             var formatString = attributeProvider
@@ -276,20 +334,9 @@ namespace Refit
     /// <summary>
     /// Default Api exception factory.
     /// </summary>
-    public class DefaultApiExceptionFactory
+    public class DefaultApiExceptionFactory(RefitSettings refitSettings)
     {
         static readonly Task<Exception?> NullTask = Task.FromResult<Exception?>(null);
-
-        readonly RefitSettings refitSettings;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="DefaultApiExceptionFactory"/> class.
-        /// </summary>
-        /// <param name="refitSettings">The refit settings.</param>
-        public DefaultApiExceptionFactory(RefitSettings refitSettings)
-        {
-            this.refitSettings = refitSettings;
-        }
 
         /// <summary>
         /// Creates the asynchronous.
@@ -298,7 +345,7 @@ namespace Refit
         /// <returns></returns>
         public Task<Exception?> CreateAsync(HttpResponseMessage responseMessage)
         {
-            if (!responseMessage.IsSuccessStatusCode)
+            if (responseMessage?.IsSuccessStatusCode == false)
             {
                 return CreateExceptionAsync(responseMessage, refitSettings)!;
             }
